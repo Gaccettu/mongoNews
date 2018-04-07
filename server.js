@@ -17,6 +17,14 @@ app.use(
 app.use(express.static("public"));
   
 // Database configuration
+var databaseUri = 'mongodb://localhost/mlbHeadlines';
+
+if(process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI);
+}else{
+  mongoose.connect(databaseUri)
+};
+
 var databaseUrl = "mlbHeadlines";
 var collections = ["headlines", "notes"];
   
