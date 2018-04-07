@@ -1,9 +1,10 @@
 var mongojs = require("mongojs");
-var mongoose = require("mongoose")
+var mongoose = require("mongoose");
 var bodyParser = require("body-parser");
 var cheerio = require("cheerio");
 var request = require("request");
 var express = require("express");
+var logger = require("morgan");
 var exphbs = require("express-handlebars");
 
 var app = express();
@@ -17,7 +18,7 @@ app.use(express.static("public"));
   
 // Database configuration
 var databaseUrl = "mlbHeadlines";
-var collections = ["headlines"];
+var collections = ["headlines", "notes"];
   
 // Hook mongojs config to db variable
 var db = mongojs(databaseUrl, collections);
@@ -58,9 +59,6 @@ app.get("/scrape", function(req, res){
     // Load the body of the HTML into cheerio
     var $ = cheerio.load(html);
 
-    // Empty array to save our scraped data
-    var results = [];
-
     // With cheerio, find each h4-tag with the class "headline-link" and loop through the results
     $("div.u-text-h4.u-text-flow").each(function(i, element) {
 
@@ -75,7 +73,8 @@ app.get("/scrape", function(req, res){
         db.headlines.insert({
         title: title,
         link: link,
-        saved: false
+        saved: false,
+        note: ""
         },
 
         function (err, data){
@@ -92,7 +91,7 @@ app.get("/scrape", function(req, res){
   res.send("Scrape Complete");
 });
 
-app.get("/saved/:id", function (req, res) {
+app.put("/saved/:id", function (req, res) {
 
   db.headlines.update({
     _id: mongojs.ObjectId(req.params.id)
@@ -113,9 +112,11 @@ app.get("/saved/:id", function (req, res) {
     }
   }
   )
-})
+});
 
-app.get("/unsaved/:id", function (req, res) {
+
+
+app.put("/unsaved/:id", function (req, res) {
 
   db.headlines.update({
     _id: mongojs.ObjectId(req.params.id)
@@ -136,7 +137,34 @@ app.get("/unsaved/:id", function (req, res) {
     }
   }
   )
-})
+});
+
+app.post("/notes/:id", function (req, res) {
+
+  db.note.insert(req.body, function(err, data){
+    db.headlines.findOneAndUpdate({ _id: mongojs.ObjectID(req.params.id) }, { note: mongojs.ObjectID(data._id) }, function(err, data){
+      if (err) {
+        console.log(err);
+        res.send(err);
+      }
+      else {
+        console.log(data);
+        res.send(data);
+      }
+    })
+  })
+});
+
+app.delete("/clear", function(req, res){
+  db.headlines.remove({}, function (err, data){
+    if (err){
+      console.log(error);
+      res.send(error);
+    }else{
+      res.send(data);
+    }
+  });
+});
 
 app.get("/saved", function (req, res){
 
@@ -152,8 +180,21 @@ app.get("/saved", function (req, res){
   });
 });
 
+app.get("/saved/:id", function (req, res){
+  db.headlines.find({_id: mongojs.ObjectId(req.params.id)}, function (err, data){
+    if(err){
+      console.log(error);
+      res.send(error);
+    }
+    else{
+      console.log(data);
+      res.json(data);
+    }
+  });
+});
+
 app.get("/myarticles", function (req, res){
-  res.render("saved", res);
+  res.render("myarticles", res);
 });
 
 // Listen on port 3000
