@@ -29,12 +29,16 @@ var databaseUrl = "mlbHeadlines";
 var collections = ["headlines", "notes"];
   
 // Hook mongojs config to db variable
-var db = mongojs(databaseUrl, collections);
+var db = mongoose.connection;
   
 // Log any mongojs errors to console
 db.on("error", function(error) {
   console.log("Database Error:", error);
 });
+
+db.once('open', function(){
+  console.log('Mongoose Connection Successful')
+})
 
 //handlebars
 app.engine("handlebars", exphbs({
